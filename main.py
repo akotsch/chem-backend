@@ -2,16 +2,21 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from rdkit import Chem
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from rdkit.Chem import Draw
+from io import BytesIO
+import base64
 
+# ---------- App ----------
+app = FastAPI()
+
+# ---------- Enable CORS ----------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # you can restrict to your Cloudflare domain later
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-app = FastAPI()
 
 # ---------- Request format ----------
 class MoleculeRequest(BaseModel):
@@ -42,10 +47,6 @@ def analyze_molecule(data: MoleculeRequest):
         "num_atoms": mol.GetNumAtoms(),
         "atoms": atoms
     }
-from fastapi.responses import JSONResponse
-from rdkit.Chem import Draw
-from io import BytesIO
-import base64
 
 # ---------- Molecule render ----------
 @app.post("/render")
@@ -65,16 +66,17 @@ def render_molecule(data: MoleculeRequest):
     # Encode as base64
     b64_img = base64.b64encode(byte_data).decode("utf-8")
 
-    # Prepare atom info (optional for frontend)
+    # Prepare atom info
     atoms = [{"index": a.GetIdx(), "symbol": a.GetSymbol()} for a in mol.GetAtoms()]
 
     return JSONResponse({
         "image": b64_img,
         "atoms": atoms,
-        "bonds": []  # leave empty for now
+        "bonds": []
     })
 
+# ---------- Suggest mechanism ----------
 @app.post("/suggest")
 def suggest(data: dict):
-    # Dummy response
+    # Dummy response for now
     return {"arrows": []}
