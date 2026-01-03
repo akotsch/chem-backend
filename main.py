@@ -64,3 +64,8 @@ def render_molecule(data: MoleculeRequest):
         "atoms": atoms,
         "bonds": []  # leave empty for now
     })
+
+@app.post("/suggest")
+def suggest(data: dict):
+    # Dummy response
+    return {"arrows": []}
