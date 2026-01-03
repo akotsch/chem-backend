@@ -13,7 +13,7 @@ app = FastAPI()
 # ---------- Enable CORS ----------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # you can restrict to your Cloudflare domain later
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -31,49 +31,29 @@ def root():
 @app.post("/analyze")
 def analyze_molecule(data: MoleculeRequest):
     mol = Chem.MolFromSmiles(data.smiles)
-    if mol is None:
+    if not mol:
         return {"error": "Invalid SMILES"}
 
-    atoms = []
-    for atom in mol.GetAtoms():
-        atoms.append({
-            "index": atom.GetIdx(),
-            "symbol": atom.GetSymbol(),
-            "degree": atom.GetDegree(),
-            "charge": atom.GetFormalCharge()
-        })
+    atoms = [{"index": a.GetIdx(), "symbol": a.GetSymbol(),
+              "degree": a.GetDegree(), "charge": a.GetFormalCharge()} for a in mol.GetAtoms()]
 
-    return {
-        "num_atoms": mol.GetNumAtoms(),
-        "atoms": atoms
-    }
+    return {"num_atoms": mol.GetNumAtoms(), "atoms": atoms}
 
 # ---------- Molecule render ----------
 @app.post("/render")
 def render_molecule(data: MoleculeRequest):
     mol = Chem.MolFromSmiles(data.smiles)
-    if mol is None:
+    if not mol:
         return {"error": "Invalid SMILES"}
 
-    # Generate image
     img = Draw.MolToImage(mol, size=(300,300))
-
-    # Convert to bytes
     buf = BytesIO()
     img.save(buf, format="PNG")
-    byte_data = buf.getvalue()
+    b64_img = base64.b64encode(buf.getvalue()).decode("utf-8")
 
-    # Encode as base64
-    b64_img = base64.b64encode(byte_data).decode("utf-8")
-
-    # Prepare atom info
     atoms = [{"index": a.GetIdx(), "symbol": a.GetSymbol()} for a in mol.GetAtoms()]
 
-    return JSONResponse({
-        "image": b64_img,
-        "atoms": atoms,
-        "bonds": []
-    })
+    return JSONResponse({"image": b64_img, "atoms": atoms, "bonds": []})
 
 # ---------- Suggest mechanism ----------
 @app.post("/suggest")
