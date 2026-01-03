@@ -33,3 +33,34 @@ def analyze_molecule(data: MoleculeRequest):
         "num_atoms": mol.GetNumAtoms(),
         "atoms": atoms
     }
+from fastapi.responses import JSONResponse
+from rdkit.Chem import Draw
+from io import BytesIO
+import base64
+
+# ---------- Molecule render ----------
+@app.post("/render")
+def render_molecule(data: MoleculeRequest):
+    mol = Chem.MolFromSmiles(data.smiles)
+    if mol is None:
+        return {"error": "Invalid SMILES"}
+
+    # Generate image
+    img = Draw.MolToImage(mol, size=(300,300))
+
+    # Convert to bytes
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    byte_data = buf.getvalue()
+
+    # Encode as base64
+    b64_img = base64.b64encode(byte_data).decode("utf-8")
+
+    # Prepare atom info (optional for frontend)
+    atoms = [{"index": a.GetIdx(), "symbol": a.GetSymbol()} for a in mol.GetAtoms()]
+
+    return JSONResponse({
+        "image": b64_img,
+        "atoms": atoms,
+        "bonds": []  # leave empty for now
+    })
